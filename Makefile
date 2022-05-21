@@ -1,8 +1,8 @@
 CC = gcc
 RM = rm -f
-CFLAGS = -Wall -O2 
-LIBS = -ludev -lm
-LDFLAGS = 
+CFLAGS = -Wall -O2
+LIBS = -lm
+LDFLAGS =
 
 all: ptouch-770-write
 

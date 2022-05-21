@@ -26,8 +26,6 @@
 #include <errno.h>
 #include <math.h>
 
-#include <libudev.h>
-
 /* Column height in bytes */
 #define COL_HEIGHT 16
 
