@@ -1,18 +1,19 @@
 CC = gcc
 RM = rm -f
 CFLAGS = -Wall -O2
-LIBS = -lm
+LIBS = -ludev -lm
 LDFLAGS =
 
-all: ptouch-770-write
+all: ptouch-770-write-usb ptouch-770-write-stdout
 
 clean:
-	$(RM) ptouch-770-write *.o
+	$(RM) ptouch-770-write-usb ptouch-770-write-stdout *.o
 
-ptouch-770-write: ptouch-770-write.o
+ptouch-770-write-usb: ptouch-770-write-usb.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+ptouch-770-write-stdout: ptouch-770-write-stdout.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 .c.o:
 	$(CC) $(CFLAGS) -c -o $@ $^
-
-#gcc -Wall -o ptouch-770-write -O2 ptouch-770-write.c -ludev

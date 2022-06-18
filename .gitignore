@@ -1,0 +1,4 @@
+*.o
+
+ptouch-770-write-usb
+ptouch-770-write-stdout

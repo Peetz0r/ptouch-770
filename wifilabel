@@ -8,4 +8,4 @@ size="$(($width*160/24))"
 size="$(($size<128?$size:128))"
 echo "$width" mm tape detected, resizing to "$size"px
 
-convert -background white "$1" -sample x"$size" -gravity center -extent x128 pbm:- | "$(dirname "$(readlink -f "$0")")/ptouch-770-write" $width | nc $host $port
+convert -background white "$1" -sample x"$size" -gravity center -extent x128 pbm:- | "$(dirname "$(readlink -f "$0")")/ptouch-770-write-stdout" $width | nc $host $port
