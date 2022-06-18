@@ -404,7 +404,7 @@ int write_rle(int h, unsigned char *data, size_t size)
    If query is sent, wait for response, otherwise
    return error if response is not available.
  */
-int get_printer_status(int h, int query, int *media_width)
+int get_printer_status(int h, int query, int *media_width, int *requested_media_width)
 {
 	int offset, l;
 	unsigned char response[32];
@@ -446,7 +446,15 @@ int get_printer_status(int h, int query, int *media_width)
 	if(media_width)
 	{
 		*media_width = response[10];
+		printf("Detected %d mm tape, ", *media_width);
+		if(*requested_media_width != *media_width) {
+			printf("\033[1;91mplease load %d mm tape instead!\033[0m\n", *requested_media_width);
+			return -1;
+		}
+		if(*media_width == 12) printf("printing Code128 barcode\n");
+		if(*media_width == 24) printf("printing Aztec barcode\n");
 	}
+
 	/*
 	   int i;
 	   printf("Returned data:");
@@ -464,14 +472,13 @@ int main(int argc, char **argv)
 	unsigned char *data_buffer;
 	int chosen_nr = 0;
 	const char *chosen = NULL;
-	FILE *f;
 	// this will fail if there are more than 128 printers connected
 	int np = 0;
 	const char *paths[128];
 
-	if(argc < 3)
+	if(argc != 3)
 	{
-		fprintf(stderr, "Usage: %s printernr <file.pbm ...>\n", argv[0]);
+		fprintf(stderr, "Usage: %s printernr media_width < file.pbm\n", argv[0]);
 		fprintf(stderr, "First printer has printernr==0\n");
 		return 1;
 	}
@@ -521,7 +528,7 @@ int main(int argc, char **argv)
 					udev_dev = NULL;
 				if(udev_dev)
 				{
-					udev_dev_usb = 
+					udev_dev_usb =
 						udev_device_get_parent_with_subsystem_devtype(udev_dev,
 								"usb",
 								"usb_device");
@@ -533,7 +540,7 @@ int main(int argc, char **argv)
 				{
 					vendor =
 						udev_device_get_sysattr_value(udev_dev_usb,"idVendor");
-					product = 
+					product =
 						udev_device_get_sysattr_value(udev_dev_usb,"idProduct");
 					if(vendor && product
 							&& !strcasecmp(vendor,"04f9") /* Brother */
@@ -594,17 +601,12 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	int media_width = MEDIA_WIDTH_MAX;
+	int media_width = 0;
+	int requested_media_width = atoi(argv[2]);
 
 	/* Get status */
-	if(get_printer_status(h, 1, &media_width))
+	if(get_printer_status(h, 1, &media_width, &requested_media_width))
 	{
-		return 1;
-	}
-
-	if((media_width < MEDIA_WIDTH_MIN) || (media_width > MEDIA_WIDTH_MAX))
-	{
-		fprintf(stderr, "Replace label tape cartridge\n");
 		return 1;
 	}
 
@@ -640,19 +642,19 @@ int main(int argc, char **argv)
 	cmd_buffer[12] = 0;                                /* 10 */
 
 	/* Auto cut before output */
-	memcpy(cmd_buffer + 13, "\x1b\x69\x4d\x40", 4); 
+	memcpy(cmd_buffer + 13, "\x1b\x69\x4d\x40", 4);
 
-	/* 
+	/*
 	   This was a command for number of pages before cut,
 	   apparently not used in this model.
 	 */
 	memcpy(cmd_buffer + 17, "\x1b\x69\x41\x01", 4);
 
 	/* No chain printing (cut after the label) */
-	memcpy(cmd_buffer + 21, "\x1b\x69\x4b\x08", 4); 
+	memcpy(cmd_buffer + 21, "\x1b\x69\x4b\x08", 4);
 #if 0
 	/* Margins 2mm */
-	memcpy(cmd_buffer + 25, "\x1b\x69\x64\x0e\x00", 5); 
+	memcpy(cmd_buffer + 25, "\x1b\x69\x64\x0e\x00", 5);
 #else
 	/* Margins 10 pixels */
 	memcpy(cmd_buffer + 25, "\x1b\x69\x64\x0a\x00", 5);
@@ -664,7 +666,7 @@ int main(int argc, char **argv)
 	   1b 40
 	   1b 69 61 01  raster
 	   1b 69 55 4a 00 0c 0a 00 27 00 00 02 00 00 02 00 00 00 ???
-	   1b 69 7a 84 00 18 00 aa 02 00 00 00 00 
+	   1b 69 7a 84 00 18 00 aa 02 00 00 00 00
 	   1b 69 4d 40
 	   1b 69 41 01
 	   1b 69 4b 04
@@ -680,21 +682,13 @@ int main(int argc, char **argv)
 
 	for (fi = 2; fi < argc; fi++)
 	{
-		f = fopen(argv[fi], "r");
-		if(!f)
-		{
-			fprintf(stderr, "Can't open bitmap file %s\n", argv[fi]);
-			return 1;
-		}
-
-		l = read_pbm_file(f, &data_buffer);
-		fclose(f);
+		l = read_pbm_file(stdin, &data_buffer);
 
 		p = ceil((float) (MEDIA_LENGTH_MIN - (l / COL_HEIGHT)) / 2);
 
 		if(l < 0)
 		{
-			fprintf(stderr, "Can't read bitmap file\n");
+			fprintf(stderr, "Can't read bitmap from stdin\n");
 			return 1;
 		}
 
@@ -723,10 +717,10 @@ int main(int argc, char **argv)
 			return 1;
 		}
 
-		get_printer_status(h, 0, NULL);
+		get_printer_status(h, 0, NULL, NULL);
 	}
 
-	get_printer_status(h, 1, NULL);
+	get_printer_status(h, 1, NULL, NULL);
 	close(h);
 	return 0;
 }
