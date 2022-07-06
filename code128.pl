@@ -12,8 +12,8 @@ while (@ARGV) {
 
     my $data = shift;
 
-    open my $pipe_zint, "-|", qw[zint --barcode 92 --vers 4 --scale 2 --direct --data], $data;
-    open my $pipe_convert, "|-", qw[convert mch-logo-24mm.png -append -gravity center PNG:- +antialias -font DejaVu-Sans-Mono-Bold -pointsize 20 -size 128x], "caption:$data", qw[-append -rotate 90], "pbm:$fn";
+    open my $pipe_zint, "-|", qw[zint --barcode 20 --notext --height 50 --scale 0.5 --direct --data], $data;
+    open my $pipe_convert, "|-", qw[convert mch-logo-12mm.png PNG:- +append +antialias -gravity center -font DejaVu-Sans-Mono-Bold -pointsize 20], "label:$data", qw[-append -gravity west -extent x128 pbm:], "pbm:$fn";
     local $/ = \8192;
     print $pipe_convert $_ while defined($_ = readline $pipe_zint);
     close $pipe_convert;
