@@ -1,7 +1,10 @@
 #!/bin/bash
 
-host="10.42.42.222"
+# host="10.4.2.27" # old printer
+host="10.4.2.222"
 port="9100"
+
+echo trying http://$host/
 
 width="$(curl -s http://$host/general/status.html | grep -Po '\d+(?=mm)')"
 size="$(($width*160/24))"
